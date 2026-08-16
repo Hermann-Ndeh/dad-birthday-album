@@ -79,26 +79,27 @@
     @media (max-width: 380px) { .gallery { grid-template-columns: 1fr; } }
 
     .photo-item {
-      margin-bottom: 0;
       border-radius: 16px;
       overflow: hidden;
       cursor: pointer;
-      display: block;
       position: relative;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: opacity 0.45s ease, transform 0.45s ease;
+      background: rgba(255,255,255,0.06);
+      /* 3:2 camera aspect ratio — placeholder holds space so lazy-load
+         sees both columns in-viewport and fetches them simultaneously */
+      aspect-ratio: 3/2;
     }
-    .photo-item.in { opacity: 1; transform: translateY(0); }
 
     .photo-item img {
       display: block;
       width: 100%;
-      height: auto;
-      border-radius: 16px;
-      transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.4s ease,
+                  transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
                   filter 0.3s ease;
     }
+    .photo-item img.loaded { opacity: 1; }
     .photo-item:hover img {
       transform: scale(1.03);
       filter: brightness(1.06);
@@ -243,36 +244,14 @@
     // Any JPG/PNG/WEBP added to the bucket shows up automatically on refresh.
     async function init() {
       try {
-        // 1. Get photo list from S3
         const res = await fetch(BUCKET_URL);
         if (!res.ok) throw new Error(res.statusText);
         const xml = new DOMParser().parseFromString(await res.text(), 'text/xml');
-        const keys = [...xml.querySelectorAll('Contents Key')]
+        const photos = [...xml.querySelectorAll('Contents Key')]
           .map(el => el.textContent)
-          .filter(k => /\.(jpe?g|png|webp)$/i.test(k));
-        if (keys.length === 0) throw new Error('No photos found');
-
-        // 2. Load exifr (reads only the first few KB of each file for EXIF data)
-        await new Promise((resolve, reject) => {
-          const s = document.createElement('script');
-          s.src = 'https://unpkg.com/exifr/dist/lite.umd.js';
-          s.onload = resolve; s.onerror = reject;
-          document.head.appendChild(s);
-        });
-
-        // 3. Read DateTimeOriginal from each photo in parallel
-        const photos = await Promise.all(keys.map(async (key) => {
-          const src = `${BUCKET_URL}/${key}`;
-          let ts = 0;
-          try {
-            const exif = await exifr.parse(src, ['DateTimeOriginal']);
-            ts = exif?.DateTimeOriginal ? new Date(exif.DateTimeOriginal).getTime() : 0;
-          } catch { /* no EXIF — falls back to 0 */ }
-          return { src, alt: '', ts };
-        }));
-
-        // 4. Sort oldest → newest by photo timestamp
-        photos.sort((a, b) => a.ts - b.ts);
+          .filter(k => /\.(jpe?g|png|webp)$/i.test(k))
+          .map(key => ({ src: `${BUCKET_URL}/${key}`, alt: '' }));
+        if (photos.length === 0) throw new Error('No photos found');
         render(photos);
       } catch (err) {
         document.getElementById('loading').classList.add('hidden');
@@ -302,9 +281,9 @@
         img.alt = photo.alt || '';
         img.decoding = 'async';
 
-        // reveal only once the image has fully loaded — no layout jumps
-        img.addEventListener('load', () => item.classList.add('in'));
-        img.addEventListener('error', () => item.classList.add('in'));
+        img.loading = 'lazy';
+        img.addEventListener('load', () => img.classList.add('loaded'));
+        img.addEventListener('error', () => img.classList.add('loaded'));
         img.src = photo.src;
 
         item.appendChild(img);
