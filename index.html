@@ -277,26 +277,19 @@
         item.dataset.index = i;
 
         const img = document.createElement('img');
-        img.src = photo.src;
         img.alt = photo.alt || '';
         img.loading = 'lazy';
         img.decoding = 'async';
+
+        // reveal only once the image has fully loaded — no layout jumps
+        img.addEventListener('load', () => item.classList.add('in'));
+        img.addEventListener('error', () => item.classList.add('in'));
+        img.src = photo.src;
 
         item.appendChild(img);
         item.addEventListener('click', () => openLightbox(i));
         gallery.appendChild(item);
       });
-
-      // Staggered fade-in
-      const io = new IntersectionObserver(entries => {
-        entries.forEach(e => {
-          if (!e.isIntersecting) return;
-          const delay = Math.min(+e.target.dataset.index * 50, 400);
-          setTimeout(() => e.target.classList.add('in'), delay);
-          io.unobserve(e.target);
-        });
-      }, { threshold: 0.04 });
-      document.querySelectorAll('.photo-item').forEach(el => io.observe(el));
     }
 
     // Scroll button
