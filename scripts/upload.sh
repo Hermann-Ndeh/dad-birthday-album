@@ -12,8 +12,8 @@
 
 set -euo pipefail
 
-BUCKET="YOUR-BUCKET-NAME"
-REGION="us-east-1"
+BUCKET="thembuas"
+REGION="us-east-1"  # confirmed
 UPLOADS_DIR="./uploads"
 BASE_URL="https://${BUCKET}.s3.${REGION}.amazonaws.com"
 
