@@ -83,17 +83,12 @@
       overflow: hidden;
       cursor: pointer;
       position: relative;
-      background: rgba(255,255,255,0.06);
-      /* 3:2 camera aspect ratio — placeholder holds space so lazy-load
-         sees both columns in-viewport and fetches them simultaneously */
-      aspect-ratio: 3/2;
     }
 
     .photo-item img {
       display: block;
       width: 100%;
-      height: 100%;
-      object-fit: cover;
+      height: auto;
       opacity: 0;
       transition: opacity 0.4s ease,
                   transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
